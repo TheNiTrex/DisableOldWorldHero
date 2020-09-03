@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Default" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Guid>7a7c6ac0-27e4-448a-98ee-53fd0b489f48</Guid>
+    <Name>Disable Old World Hero</Name>
+    <Description>Disables the Old World Hero added by Resistance Warrior Pack.</Description>
+    <SteamPublishID>0</SteamPublishID>
+    <AssemblyName>DisableOldWorldHero</AssemblyName>
+    <RootNamespace>DisableOldWorldHero</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Folder Include="Config\" />
+    <Folder Include="Localization\" />
+    <Folder Include="Src\" />
+    <Folder Include="Src\DisableOldWorldHero\" />
+    <Folder Include="Src\DisableOldWorldHero\Classes\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="ReadMe.txt" />
+    <Content Include="ModPreview.jpg" />
+    <Content Include="Config\XComEditor.ini" />
+    <Content Include="Config\XComEngine.ini" />
+    <Content Include="Config\XComGame.ini" />
+    <Content Include="Localization\XComGame.int" />
+    <Content Include="Src\DisableOldWorldHero\Classes\X2DownloadableContentInfo_DisableOldWorldHero.uc" />
+  </ItemGroup>
+  <Import Project="$(MSBuildLocalExtensionPath)\XCOM2.targets" />
+</Project>
