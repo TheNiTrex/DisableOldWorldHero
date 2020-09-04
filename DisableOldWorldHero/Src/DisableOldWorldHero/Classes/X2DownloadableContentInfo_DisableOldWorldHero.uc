@@ -40,10 +40,8 @@ static function RestoreCharacter(XComGameState StartState) {
 	local X2EquipmentTemplate ArmorTemplate;
 	local XComGameState_Item ResistanceArmor;
 	local XComGameState_Item KevlarArmor;
-	local XGCharacterGenerator CharGen;
 	local X2CharacterTemplate CharTemplate;
-	local X2CharacterTemplateManager CharTemplateMgr;
-	local TSoldier Soldier;
+	local TAppearance KevlarAppearance;
 
 	XComHQ = `XCOMHQ;
 	History = `XCOMHISTORY;
@@ -53,87 +51,132 @@ static function RestoreCharacter(XComGameState StartState) {
 		BarracksUnit = XComGameState_Unit(History.GetGameStateForObjectID(UnitRef.ObjectID));
 		BarracksUnit = XComGameState_Unit(StartState.ModifyStateObject(class'XComGameState_Unit', BarracksUnit.ObjectID));
 
-		if (BarracksUnit != none && BarracksUnit.IsSoldier()) {
+		if (BarracksUnit != none && BarracksUnit.IsSoldier() && DoesSoldierHaveOldWarHeroAppearance(BarracksUnit)) {
 
-			 if ((BarracksUnit.kAppearance.nmHaircut == 'Classic_M' || BarracksUnit.kAppearance.nmHaircut == 'Classic_F') && (BarracksUnit.kAppearance.nmFacePropUpper == 'Aviators_M' || BarracksUnit.kAppearance.nmFacePropUpper == 'Aviators_F') && (BarracksUnit.kAppearance.nmTorso == 'DLC_0_ResistanceWarrior_E_M' || BarracksUnit.kAppearance.nmTorso == 'DLC_0_ResistanceWarrior_E_F')) {
-			 //if (BarracksUnit.kAppearance.nmHaircut == 'Classic_M' || BarracksUnit.kAppearance.nmHaircut == 'Classic_F') {
+			`log("TEST - Old World Soldier Located");
 
-				`log("TEST - Old World Soldier Located");
+			ResistanceArmor = BarracksUnit.GetItemInSlot(eInvSlot_Armor, StartState, true); // Get the Resistance Warrior Armor the Old World Hero is wearing.
 
-				CharTemplateMgr = class'X2CharacterTemplateManager'.static.GetCharacterTemplateManager();
-				CharTemplate = CharTemplateMgr.FindCharacterTemplate('Soldier');
-				CharGen = `XCOMGRI.Spawn(CharTemplate.CharacterGeneratorClass);
+			// Check if the unit has Resistance Warrior Kevlar Armor equipped, and if not, go to the next unit in the Crew array.
+			// Failsafe in case the user has a Character Pool unit w/ the exact same appearance as the Old World Hero.
+			if (ResistanceArmor == none || ResistanceArmor.GetMyTemplateName() != 'KevlarArmor_DLC_Day0') {
 
-				CharacterPool = CharacterPoolManager(`XENGINE.GetCharacterPoolManager());
-				PoolUnit = CharacterPool.GetCharacter(BarracksUnit.GetFullName());
+				continue;
 
+			}
+
+			CharTemplate = BarracksUnit.GetMyTemplate();
+			if (CharTemplate == none) continue;
+
+			CharacterPool = CharacterPoolManager(`XENGINE.GetCharacterPoolManager());
+			PoolUnit = CharacterPool.GetCharacter(BarracksUnit.GetFullName());
+
+			if (PoolUnit == none) { // If the Old World Hero doesn't override a Character Pool unit.
+
+				`log("TEST - Character Pool Soldier Not Found");
+
+				BarracksUnit.GetStoredAppearance(KevlarAppearance,, 'KevlarArmor'); // Gets the appearance of the Old World Hero when wearing standard Kevlar Armor.
+
+				// Use stored appearance to modify appearance of Resistance Warrior Kevlar Armor to match that of standard Kevlar Armor.
+				BarracksUnit.kAppearance.nmHaircut = KevlarAppearance.nmHaircut;
+				BarracksUnit.kAppearance.nmHelmet = KevlarAppearance.nmHelmet;
+				BarracksUnit.kAppearance.nmFacePropUpper = KevlarAppearance.nmFacePropUpper;
+				BarracksUnit.kAppearance.nmFacePropLower = KevlarAppearance.nmFacePropLower;
+
+				ResetTorso(BarracksUnit); // Reset Resistance Warrior Kevlar Armor to randomly choose new Torso and empty-out unused part-types.
+
+				BarracksUnit.GenerateBackground(, BarracksUnit.kAppearance.nmFlag); //Regenerate Biography.
+
+			} else { // If the Old World Hero does override a Character Pool unit.
+
+				`log("TEST - Character Pool Soldier Located");
+
+				// Modify appearance of Resistance Warrior Kevlar Armor to match that of the Character Pool unit.
+				BarracksUnit.kAppearance.nmHaircut = PoolUnit.kAppearance.nmHaircut;
+				BarracksUnit.kAppearance.nmHelmet = PoolUnit.kAppearance.nmHelmet;
+				BarracksUnit.kAppearance.nmFacePropUpper = PoolUnit.kAppearance.nmFacePropUpper;
+				BarracksUnit.kAppearance.nmFacePropLower = PoolUnit.kAppearance.nmFacePropLower;
+				BarracksUnit.kAppearance.iAttitude = PoolUnit.kAppearance.iAttitude;
+
+				ResetTorso(BarracksUnit); // Reset Resistance Warrior Kevlar Armor to randomly choose new Torso and empty-out unused part-types.
+
+				BarracksUnit.SetBackground(PoolUnit.GetBackground()); // Gets Biography from Character Pool unit.
+
+			}
+
+			BarracksUnit.StoreAppearance(,'KevlarArmor_DLC_Day0'); // Store the now restored appearance of the Old World Hero w/ Resistance Warrior Kevlar Armor.
+
+			// Replace their equipped Resistance Warrior Kevlar Armor with the armor stored in the unit's default loadout. 
+			// In 99.9% of cases that's gonna be standard Kevlar Armor, but mods can change it pretty easily, so let's get the armor from the character template.
+			ArmorTemplate = FindDefaultArmorForUnit(BarracksUnit);
+			if (ArmorTemplate == none) {	
+
+				// Fallback to standard Kevlar Armor if there's no specified armor template.
 				ItemMgr = class'X2ItemTemplateManager'.static.GetItemTemplateManager();
 				ArmorTemplate = X2EquipmentTemplate(ItemMgr.FindItemTemplate('KevlarArmor'));
-				KevlarArmor = ArmorTemplate.CreateInstanceFromTemplate(StartState);
 
-				//Define Resistance Warrior Armor using the Old World Hero and Equip standard Kevlar Armor:
-				ResistanceArmor = BarracksUnit.GetItemInSlot(eInvSlot_Armor);
-				BarracksUnit.AddItemToInventory(KevlarArmor, eInvSlot_Armor, StartState);
+			}
 
-				if (PoolUnit == none) { //If the Old World Soldier doesn't override a Character Pool Unit
+			if (ArmorTemplate == none) return; // Exit function if there's not even Kevlar Armor, which shouldn't ever happen.
+			
+			KevlarArmor = ArmorTemplate.CreateInstanceFromTemplate(StartState); // Define Kevlar Armor Template
 
-					`log("TEST - Character Pool Soldier Not Found");
+			// Remove and destroy the Resistance Warrior Kevlar Armor that was equipped.
+			BarracksUnit.RemoveItemFromInventory(ResistanceArmor, StartState);
+			StartState.RemoveStateObject(ResistanceArmor.ObjectID);
 
-					//Handle Restoration:
-					Soldier = CharGen.CreateTSoldier(CharTemplate.DataName);
-					BarracksUnit.SetTAppearance(Soldier.kAppearance);
-					BarracksUnit.SetCharacterName(Soldier.strFirstName, Soldier.strLastName, Soldier.strNickName);
-					BarracksUnit.SetCountry(Soldier.nmCountry);
-					BarracksUnit.GenerateBackground(, CharGen.BioCountryName);
+			// Equip standard Kevlar Armor.
+			BarracksUnit.AddItemToInventory(KevlarArmor, eInvSlot_Armor, StartState);
+			if (PoolUnit != none) BarracksUnit.kAppearance.iAttitude = PoolUnit.kAppearance.iAttitude; // Restore Attitude for overwritten Character Pool unit when wearing standard Kevlar Armor.
+			BarracksUnit.StoreAppearance(,'KevlarArmor'); // Save unit's appearance w/ standard Kevlar Armor.
 
-					//Store appearance of Soldier w/ standard Kevlar Armor, then Equips Resistance Warrior Armor:
-					BarracksUnit.StoreAppearance(,'KevlarArmor');
-					BarracksUnit.AddItemToInventory(ResistanceArmor, eInvSlot_Armor, StartState);
+			// Exit function once we find the first soldier matching the condition.
+			return;
 
-					BarracksUnit.SetTAppearance(Soldier.kAppearance); //Set appearance of Soldier w/ Resistance Warrior Armor (Since parts of appearances are on a per-armor basis)
+		}
+	}
+}
 
-					BarracksUnit.StoreAppearance(,'KevlarArmor_DLC_Day0'); //Store appearance of Soldier w/ Resistance Warrior Armor
+static private function bool DoesSoldierHaveOldWarHeroAppearance(XComGameState_Unit UnitState) { //	Check if the unit has Aviators and Blowout hair.
 
-					ResetTorso(BarracksUnit); //Reset Resistance Warrior Armor to randomly choose new Torso and empty-out unused part-types
+	return ((UnitState.kAppearance.nmHaircut == 'Classic_M' || UnitState.kAppearance.nmHaircut == 'Classic_F') && 
+			(UnitState.kAppearance.nmFacePropUpper == 'Aviators_M' || UnitState.kAppearance.nmFacePropUpper == 'Aviators_F'));
 
-					BarracksUnit.RemoveItemFromInventory(ResistanceArmor, StartState);
-					BarracksUnit.AddItemToInventory(KevlarArmor, eInvSlot_Armor, StartState); //Re-equip standard Kevlar Armor
-					//BarracksUnit.RemoveItemFromInventory(ResistanceArmor, StartState); //Removes unused Resistance Armour so it isn't stuck in limbo
+}
 
-					if( CharGen != none ) {
+static private function X2EquipmentTemplate FindDefaultArmorForUnit(XComGameState_Unit UnitState) {
 
-						CharGen.Destroy();
+	local X2CharacterTemplate			CharTemplate;
+	local X2ItemTemplateManager			ItemTemplateManager;
+	local InventoryLoadout				Loadout;
+	local InventoryLoadoutItem			LoadoutItem;
+	local X2EquipmentTemplate			EquipmentTemplate;
 
-					}
+	ItemTemplateManager = class'X2ItemTemplateManager'.static.GetItemTemplateManager();
+	CharTemplate = UnitState.GetMyTemplate();
 
-				} else { //If the Old World Soldier does override a Character Pool Unit
+	foreach ItemTemplateManager.Loadouts(Loadout) {
 
-					`log("TEST - Character Pool Soldier Located");
+		if (Loadout.LoadoutName == CharTemplate.DefaultLoadout)	{
 
-					//Handle Restoration:
-					BarracksUnit.SetBackground(PoolUnit.GetBackground());
-					BarracksUnit.kAppearance = PoolUnit.kAppearance;
+			foreach Loadout.Items(LoadoutItem) {
 
-					BarracksUnit.kAppearance.iAttitude = PoolUnit.kAppearance.iAttitude;
+				EquipmentTemplate = X2EquipmentTemplate(ItemTemplateManager.FindItemTemplate(LoadoutItem.Item));
 
-					//Store appearance of Soldier w/ standard Kevlar Armor, then Equips Resistance Warrior Armor:
-					BarracksUnit.StoreAppearance(,'KevlarArmor');
-					BarracksUnit.AddItemToInventory(ResistanceArmor, eInvSlot_Armor, StartState);
+				if (EquipmentTemplate != none && EquipmentTemplate.InventorySlot == eInvSlot_Armor) {
 
-					BarracksUnit.SetTAppearance(PoolUnit.kAppearance); //Set appearance of Soldier w/ Resistance Warrior Armor (Since parts of appearances are on a per-armor basis)
-
-					BarracksUnit.StoreAppearance(,'KevlarArmor_DLC_Day0'); //Store appearance of Soldier w/ Resistance Warrior Armor
-
-					ResetTorso(BarracksUnit); //Reset Resistance Warrior Armor to randomly choose new Torso and empty-out unused part-types
-
-					BarracksUnit.RemoveItemFromInventory(ResistanceArmor, StartState);
-					BarracksUnit.AddItemToInventory(KevlarArmor, eInvSlot_Armor, StartState); //Re-equip standard Kevlar Armor
-					//BarracksUnit.RemoveItemFromInventory(ResistanceArmor, StartState); //Removes unused Resistance Armour so it isn't stuck in limbo
+					return EquipmentTemplate;
 
 				}
 			}
+
+			return none;
+
 		}
-	}    
+	}
+
+	return none;
+
 }
 
 static function ResetTorso(XComGameState_Unit BarracksUnit) {
@@ -162,17 +205,4 @@ static function ResetTorso(XComGameState_Unit BarracksUnit) {
 		BarracksUnit.kAppearance.nmTorso = TemplateNamesF[`SYNC_RAND_STATIC(TemplateNamesM.Length)];
 
 	}
-
-	BarracksUnit.kAppearance.nmArms = '';
-	BarracksUnit.kAppearance.nmLegs = '';
-	BarracksUnit.kAppearance.nmLeftArm = '';		
-	BarracksUnit.kAppearance.nmRightArm = '';	
-	BarracksUnit.kAppearance.nmLeftArmDeco = '';	
-	BarracksUnit.kAppearance.nmRightArmDeco = '';
-	BarracksUnit.kAppearance.nmLeftForearm = '';
-	BarracksUnit.kAppearance.nmRightForearm = '';
-	BarracksUnit.kAppearance.nmThighs = '';
-	BarracksUnit.kAppearance.nmShins = '';
-	BarracksUnit.kAppearance.nmTorsoDeco = '';
-
 }
