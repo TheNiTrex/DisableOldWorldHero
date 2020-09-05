@@ -3,7 +3,9 @@
   <PropertyGroup>
     <Guid>7a7c6ac0-27e4-448a-98ee-53fd0b489f48</Guid>
     <Name>Disable Old World Hero</Name>
-    <Description>Disables the Old World Hero added by Resistance Warrior Pack.</Description>
+    <Description>Disables the Old World Hero added by the Resistance Warrior Pack DLC.
+
+tags= war of the chosen, soldier customization</Description>
     <SteamPublishID>0</SteamPublishID>
     <AssemblyName>DisableOldWorldHero</AssemblyName>
     <RootNamespace>DisableOldWorldHero</RootNamespace>
