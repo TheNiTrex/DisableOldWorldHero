@@ -128,6 +128,7 @@ static function RestoreCharacter(XComGameState StartState) {
 			// Equip standard Kevlar Armor.
 			BarracksUnit.AddItemToInventory(KevlarArmor, eInvSlot_Armor, StartState);
 			if (PoolUnit != none) BarracksUnit.kAppearance.iAttitude = PoolUnit.kAppearance.iAttitude; // Restore Attitude for overwritten Character Pool unit when wearing standard Kevlar Armor.
+			BarracksUnit.UpdatePersonalityTemplate(); // Refreshes the unit's Attitude, fix for Issue #1.
 			BarracksUnit.StoreAppearance(,'KevlarArmor'); // Save unit's appearance w/ standard Kevlar Armor.
 
 			// Exit function once we find the first unit matching the condition.
